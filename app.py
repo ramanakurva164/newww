@@ -75,19 +75,9 @@ with st.sidebar:
 
     st.header("⚙️ Settings")
     
-    col1_sb, col2_sb = st.columns(2)
-    with col1_sb:
-        if st.button("Rebuild Index"):
-            with st.spinner("Rebuilding from ./docs folder..."):
-                active_index, active_chunks = build_vectorstore()
-                st.session_state.active_index = active_index
-                st.session_state.active_chunks = active_chunks
-            st.success("✅ Rebuilt vectorstore.")
-    
-    with col2_sb:
-        if st.button("New Chat"):
-            st.session_state.messages = []
-            st.rerun()
+    if st.button("New Chat"):
+        st.session_state.messages = []
+        st.rerun()
 
 # --- Load or Initialize Vectorstore ---
 # This ensures that a vectorstore is always loaded, even on first run

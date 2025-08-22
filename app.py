@@ -42,7 +42,7 @@ def load_model():
 qa_pipeline = load_model()
 
 # --- Main App Logic ---
-st.title("📘 RAG-Based Document Question Answering Chatbot")
+st.title("📘 Chat with your documents like never before.")
 
 # --- Sidebar for functionality ---
 with st.sidebar:
@@ -73,7 +73,7 @@ with st.sidebar:
             st.session_state.active_chunks = chunks
         st.success("✅ Uploaded and indexed documents!")
 
-    st.header("⚙️ Settings")
+    
     
     if st.button("New Chat"):
         st.session_state.messages = []

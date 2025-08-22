@@ -87,7 +87,7 @@ with st.sidebar:
     with col2_sb:
         if st.button("New Chat"):
             st.session_state.messages = []
-            st.experimental_rerun()
+            st.rerun()
 
 # --- Load or Initialize Vectorstore ---
 # This ensures that a vectorstore is always loaded, even on first run

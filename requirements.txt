@@ -1,3 +1,4 @@
+supabase
 streamlit
 faiss-cpu
 sentence-transformers

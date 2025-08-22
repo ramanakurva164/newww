@@ -4,8 +4,7 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
 import faiss
 from PyPDF2 import PdfReader
-from supabase import create_client, Client
-from gotrue.errors import AuthApiError
+from supabase import create_client, Client, AuthApiError
 
 # --- Supabase Client Initialization ---
 # Initialize the Supabase client. Using st.secrets to securely store credentials.

@@ -84,16 +84,17 @@ def load_vectorstore() -> Tuple[faiss.IndexFlatL2, List[str]]:
         return index, chunks
     return build_vectorstore()
 
-def retrieve(query: str, index: faiss.IndexFlatL2, chunks: List[str], k: int = 3) -> Tuple[List[str], List[int]]:
-    """Retrieve top-k relevant chunks and their indices for a query."""
+def retrieve(query: str, index: faiss.IndexFlatL2, chunks: List[str], k: int = 3) -> List[str]:
+    """Retrieve top-k relevant chunks for a query."""
     if not chunks or index.ntotal == 0:
-        return [], []
+        return []
     embedder = get_embedder()
     q_emb = embedder.encode([query], convert_to_numpy=True)
     D, I = index.search(q_emb, k)
     
-    # Filter for valid indices
-    valid_indices = [i for i in I[0] if 0 <= i < len(chunks)]
-    retrieved_chunks = [chunks[i] for i in valid_indices]
-    
-    return retrieved_chunks, valid_indices
+    retrieved_chunks = []
+    for i in I[0]:
+        if 0 <= i < len(chunks):
+            retrieved_chunks.append(chunks[i])
+            
+    return retrieved_chunks

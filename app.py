@@ -120,6 +120,7 @@ else:
         
         # Display user profile data from Supabase
         user_id = st.session_state.user.id
+        
         try:
             response = supabase.from("profiles").select("*").eq("id", user_id).single().execute()
             if response.data:

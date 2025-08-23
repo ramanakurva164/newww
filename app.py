@@ -139,7 +139,7 @@ if not st.session_state.logged_in:
         """
         <div style="display: flex; justify-content: center; align-items: center;">
             <img src="https://res.cloudinary.com/dxu4rrvdh/image/upload/e_background_removal/e_dropshadow:azimuth_220;elevation_60;spread_20/f_png/v1755923220/robot-head-speech-bubble-red-600nw-2483741073_x4phdj.webp" 
-                 width="120" style="border-radius:50%;">
+                 width="220" style="border-radius:50%;">
         </div>
         """,
         unsafe_allow_html=True

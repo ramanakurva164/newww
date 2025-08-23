@@ -75,11 +75,11 @@ st.markdown("""
         color: #f5f5f5;
     }
     .stTextInput > div > div > div[data-baseweb="button"] {
-                border: 2px solid orange !important;
-                border-left: none !important;
-                border-radius: 0 8px 8px 0 !important;
-                background-color: #1e1e1e !important;
-                color: white !important;
+                border: 2px solid #f97316;
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 16px;
+        color: #f5f5f5;
             }
     /* Button styles */
     .stButton>button {

@@ -135,7 +135,7 @@ if not st.session_state.logged_in:
         """,
         unsafe_allow_html=True
     )
-    st.image("https://res.cloudinary.com/dxu4rrvdh/image/upload/e_background_removal/e_dropshadow:azimuth_220;elevation_60;spread_20/f_png/v1755923220/robot-head-speech-bubble-red-600nw-2483741073_x4phdj.webp",width=120)
+    
     st.title("Login to your RAG Chatbot")
     st.write("Enter your credentials or create a new account.")
 

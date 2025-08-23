@@ -75,7 +75,8 @@ st.markdown("""
         color: #f5f5f5;
     }
     .stTextInput > div > div > div[data-baseweb="button"] {
-                border: 2px solid #f97316;
+       background-color: #2b2b2b;
+        border: 2px solid #f97316;
         border-radius: 10px;
         padding: 10px;
         font-size: 16px;

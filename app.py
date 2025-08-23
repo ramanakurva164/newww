@@ -125,43 +125,19 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # --- Authentication Gate ---
+# --- Authentication Gate ---
 if not st.session_state.logged_in:
-    # Custom CSS for centering & responsive width
     st.markdown(
         """
-        <style>
-            .login-container {
-                max-width: 400px;   /* width of the box */
-                margin: auto;       /* center horizontally */
-                padding: 2rem;
-                text-align: center; /* center content inside */
-                background-color: #1e1e1e; /* dark card background */
-                border-radius: 12px; /* rounded corners */
-                box-shadow: 0px 4px 15px rgba(0,0,0,0.4); /* subtle shadow */
-            }
-            .login-container img {
-                border-radius: 50%;
-                width: 100px;
-                height: 100px;
-                object-fit: cover;
-                margin-bottom: 1rem;
-            }
-            .stButton>button {
-                width: 100%; /* make buttons full width */
-            }
-        </style>
+        <div style="display: flex; justify-content: center; align-items: center;">
+            <img src="https://res.cloudinary.com/dxu4rrvdh/image/upload/e_background_removal/e_dropshadow:azimuth_220;elevation_60;spread_20/f_png/v1755923220/robot-head-speech-bubble-red-600nw-2483741073_x4phdj.webp" 
+                 width="120" style="border-radius:50%;">
+        </div>
         """,
         unsafe_allow_html=True
     )
-
-    # Centered login block
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-
-    st.image(
-        "https://res.cloudinary.com/dxu4rrvdh/image/upload/e_background_removal/e_dropshadow:azimuth_220;elevation_60;spread_20/f_png/v1755923220/robot-head-speech-bubble-red-600nw-2483741073_x4phdj.webp",
-        width=100
-    )
-    st.markdown("## Login to your RAG Chatbot")  # centered title
+    
+    st.title("Login to your RAG Chatbot")
     st.write("Enter your credentials or create a new account.")
 
     with st.form("login_form"):
@@ -182,8 +158,6 @@ if not st.session_state.logged_in:
                 sign_up(email, password)
             else:
                 st.warning("Please enter both email and password.")
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 else:
     # --- Load LLM (Cached for Performance) ---

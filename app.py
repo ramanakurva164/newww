@@ -160,7 +160,7 @@ else:
     qa_pipeline = load_model()
 
     # --- Main Application UI ---
-    st.title("📘 Chat with your documents")
+    st.title("📘 Chat with your documents like never before.")
 
     # --- Sidebar for User Profile and Document Management ---
     with st.sidebar:

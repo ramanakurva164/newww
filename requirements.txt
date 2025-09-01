@@ -4,7 +4,6 @@ transformers>=4.37.0
 torchaudio>=2.1.0
 numpy>=1.25.0
 faiss-cpu>=1.7.4
-PyPDF2>=3.1.0
+PyPDF2==3.0.1
 soundfile>=0.12.1
-TTS>=0.13.0
 supabase>=3.9.0

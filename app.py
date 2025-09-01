@@ -3,11 +3,11 @@ import io
 import torch
 import faiss
 import tempfile
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+import transformers
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from PyPDF2 import PdfReader
 from supabase import create_client, Client, AuthApiError
 from elevenlabs.client import ElevenLabs
-from pydub import AudioSegment
 
 from rag_utils import load_vectorstore, retrieve, chunk_text, get_embedder
 
@@ -32,7 +32,6 @@ except KeyError:
 
 # ---------------- Authentication Functions ----------------
 def sign_in(email, password):
-    """Signs in a user with email and password using Supabase."""
     try:
         response = supabase.auth.sign_in_with_password({"email": email, "password": password})
         if hasattr(response, "user") and response.user:
@@ -44,25 +43,23 @@ def sign_in(email, password):
     except AuthApiError as e:
         st.error(f"Login failed: {e.message}")
     except Exception as e:
-        st.error(f"An unexpected error occurred during login: {e}")
+        st.error(f"Unexpected error during login: {e}")
 
 
 def sign_up(email, password):
-    """Signs up a new user with email and password using Supabase."""
     try:
         response = supabase.auth.sign_up({"email": email, "password": password})
         if response.user:
             st.success("Account created! Please check your email for a confirmation link.")
         else:
-            st.error("Sign-up failed. The user may already exist or the password is too weak.")
+            st.error("Sign-up failed. User may already exist or password is too weak.")
     except AuthApiError as e:
         st.error(f"Sign-up failed: {e.message}")
     except Exception as e:
-        st.error(f"An unexpected error occurred during sign-up: {e}")
+        st.error(f"Unexpected error during sign-up: {e}")
 
 
 def logout():
-    """Logs out the current user."""
     try:
         supabase.auth.sign_out()
         for key in list(st.session_state.keys()):
@@ -72,34 +69,19 @@ def logout():
         st.error(f"Logout failed: {e}")
 
 
-# ---------------- ElevenLabs TTS Helper ----------------
+# ---------------- ElevenLabs TTS ----------------
 def generate_audio(text: str, voice_id="pNInz6obpgDQGcFmaJgB"):
     """Generate speech from text using ElevenLabs and return a temp file path."""
     try:
-        # Request TTS stream
         audio_stream = eleven_client.text_to_speech.convert(
             text=text,
             voice_id=voice_id,
             model_id="eleven_turbo_v2_5"
         )
-
-        # Convert stream into bytes
         audio_bytes = b"".join(audio_stream)
-        audio_data = io.BytesIO(audio_bytes)
 
-        # Try loading with pydub
-        try:
-            audio_segment = AudioSegment.from_file(audio_data, format="mp3")
-        except Exception:
-            audio_data.seek(0)
-            audio_segment = AudioSegment.from_file(audio_data, format="wav")
-
-        # Optionally adjust volume (+10 dB)
-        louder_audio = audio_segment + 10
-
-        # Save to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmpfile:
-            louder_audio.export(tmpfile.name, format="wav")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmpfile:
+            tmpfile.write(audio_bytes)
             return tmpfile.name
     except Exception as e:
         st.error(f"TTS generation failed: {e}")
@@ -116,38 +98,9 @@ st.markdown("""
     .stTextInput > div > div > input { background-color: #2b2b2b; border: 2px solid #f97316; border-radius: 10px; padding: 10px; font-size: 16px; color: #f5f5f5; }
     .stButton>button { background-color: #f97316; color: #1a1a1a; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 15px; border: none; box-shadow: 0px 4px 10px rgba(249, 115, 22, 0.3); transition: 0.2s ease-in-out; }
     .stButton>button:hover { background-color: #ea580c; transform: scale(1.05); }
-    .chat-bubble {
-    display: inline-block;       /* only take required width */
-    padding: 12px 16px;
-    border-radius: 16px;
-    margin: 6px 0;
-    font-size: 15px;
-    line-height: 1.4;
-    color: #f5f5f5;
-    box-shadow: 0px 2px 6px rgba(0,0,0,0.5);
-    max-width: 70%;              /* prevent super wide messages */
-    word-wrap: break-word;
-    white-space: pre-wrap;       /* preserve line breaks */
-}
-
-/* USER message (right aligned) */
-.chat-bubble-user {
-    background: #1f2937;
-    border: 2px solid #f97316;
-    border-bottom-right-radius: 4px;   /* sharp corner */
-    margin-left: auto;
-    text-align: right;
-}
-
-/* BOT message (left aligned) */
-.chat-bubble-bot {
-    background: #2b2b2b;
-    border: 2px solid #3b82f6;
-    border-bottom-left-radius: 4px;    /* sharp corner */
-    margin-right: auto;
-    text-align: left;
-}
-
+    .chat-bubble { display: inline-block; padding: 12px 16px; border-radius: 16px; margin: 6px 0; font-size: 15px; line-height: 1.4; color: #f5f5f5; box-shadow: 0px 2px 6px rgba(0,0,0,0.5); max-width: 70%; word-wrap: break-word; white-space: pre-wrap; }
+    .chat-bubble-user { background: #1f2937; border: 2px solid #f97316; border-bottom-right-radius: 4px; margin-left: auto; text-align: right; }
+    .chat-bubble-bot { background: #2b2b2b; border: 2px solid #3b82f6; border-bottom-left-radius: 4px; margin-right: auto; text-align: left; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -163,16 +116,6 @@ if "messages" not in st.session_state:
 
 # ---------------- Authentication Gate ----------------
 if not st.session_state.logged_in:
-    st.markdown(
-        """
-        <div style="display: flex; justify-content: center; align-items: center;">
-            <img src="https://res.cloudinary.com/dxu4rrvdh/image/upload/f_png/v1755923220/robot-head-speech-bubble-red-600nw-2483741073_x4phdj.webp" 
-                 width="220" style="border-radius:50%;">
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
     st.title("Login to your RAG Chatbot")
     st.write("Enter your credentials or create a new account.")
 
@@ -202,14 +145,13 @@ else:
         model_name = "google/flan-t5-base"
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModelForSeq2SeqLM.from_pretrained(model_name, torch_dtype=torch.float32)
-        return pipeline("text2text-generation", model=model, tokenizer=tokenizer)
+        return transformers.pipeline("text2text-generation", model=model, tokenizer=tokenizer)
 
     qa_pipeline = load_model()
 
     # ---------------- Main Application ----------------
     st.title("📘 Chat with your documents like never before.")
 
-    # Sidebar
     with st.sidebar:
         st.header("👤 My Account")
         if st.session_state.user:
@@ -258,7 +200,6 @@ else:
 
         play_audio = st.checkbox("🔊 Enable Audio Response", value=True)
 
-    # Load or Initialize Vectorstore
     if "active_index" not in st.session_state:
         with st.spinner("Loading knowledge base..."):
             try:
@@ -269,7 +210,6 @@ else:
                 st.error(f"Could not load the prebuilt vectorstore: {e}")
                 st.stop()
 
-    # Chat UI
     for msg in st.session_state.messages:
         role_class = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-bot"
         st.markdown(f"<div class='chat-bubble {role_class}'><b>{'You' if msg['role'] == 'user' else 'Bot'}:</b> {msg['content']}</div>", unsafe_allow_html=True)
@@ -278,7 +218,6 @@ else:
                 for ctx_chunk in msg["context"]:
                     st.write(f"- {ctx_chunk}")
 
-    # Handle user input
     if prompt := st.chat_input("Ask a question about your documents..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.markdown(f"<div class='chat-bubble chat-bubble-user'><b>You:</b> {prompt}</div>", unsafe_allow_html=True)
@@ -301,11 +240,10 @@ else:
                         for ctx_chunk in context:
                             st.write(f"- {ctx_chunk}")
 
-                # --- Audio Response ---
                 if play_audio:
                     audio_path = generate_audio(response)
                     if audio_path:
-                        st.audio(audio_path, format="audio/wav")
+                        st.audio(audio_path, format="audio/mp3")
 
             except Exception as e:
                 st.error(f"An error occurred while generating the response: {e}")

@@ -7,4 +7,3 @@ torch
 PyPDF2
 elevenlabs
 pydub
-pyaudioop

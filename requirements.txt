@@ -2,8 +2,9 @@ supabase
 streamlit
 faiss-cpu
 sentence-transformers
-transformers
+transformers==4.56.0
 torch
 PyPDF2
 elevenlabs
 pydub
+pyaudioop

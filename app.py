@@ -3,6 +3,8 @@ import io
 import torch
 import faiss
 import tempfile
+import numpy as np
+import soundfile as sf
 import transformers
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline as hf_pipeline
 from PyPDF2 import PdfReader
@@ -63,17 +65,32 @@ def logout():
 # ---------------- Hugging Face TTS ----------------
 @st.cache_resource
 def load_tts():
-    return hf_pipeline("text-to-speech", model="facebook/mms-tts-eng")
+    device = 0 if torch.cuda.is_available() else -1
+    return hf_pipeline("text-to-speech", model="facebook/mms-tts-eng", device=device)
 
 tts_pipeline = load_tts()
 
 def generate_audio(text: str):
+    """
+    Generate speech with HF TTS, save a valid WAV file, and return its path.
+    """
     try:
-        out = tts_pipeline(text)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmpfile:
-            with open(tmpfile.name, "wb") as f:
-                f.write(out["audio"])
-            return tmpfile.name
+        out = tts_pipeline(text)  # dict with keys: "audio" (np/torch), "sampling_rate" (int)
+        audio = out["audio"]
+        sr = int(out.get("sampling_rate", 16000))
+
+        # Convert to numpy float32
+        if hasattr(audio, "cpu"):  # torch tensor
+            audio = audio.detach().cpu().numpy()
+        audio = np.asarray(audio).squeeze().astype(np.float32)
+
+        # Clip to [-1, 1]
+        audio = np.clip(audio, -1.0, 1.0)
+
+        # Write proper WAV
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            sf.write(tmp.name, audio, sr, format="WAV", subtype="PCM_16")
+            return tmp.name
     except Exception as e:
         st.error(f"TTS generation failed: {e}")
         return None

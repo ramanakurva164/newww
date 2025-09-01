@@ -2,8 +2,9 @@ streamlit==1.27.0
 torch>=2.1.0
 transformers>=4.37.0
 torchaudio>=2.1.0
-numpy>=1.25.0,<2.0.0
+numpy>=1.25.0
 faiss-cpu>=1.7.4
 PyPDF2==3.0.1
 soundfile>=0.12.1
-supabase==2.18.1
+supabase<=2.18.1
+pillow>=10.0.0

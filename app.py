@@ -210,7 +210,7 @@ else:
                 "facebook/mms-tts-eng",
                 "espnet/kan-bayashi_ljspeech_vits",
                 "espnet/kan-bayashi_ljspeech_fastspeech2",
-                "coqui/XTTS-v2"
+            
             ],
             index=0
         )

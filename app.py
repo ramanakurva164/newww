@@ -66,7 +66,7 @@ def logout():
 @st.cache_resource
 def load_tts():
     device = 0 if torch.cuda.is_available() else -1
-    return hf_pipeline("text-to-speech", model="facebook/mms-tts-eng", device=device)
+    return hf_pipeline("text-to-speech", model="coqui/XTTS-v2", device=device)
 
 tts_pipeline = load_tts()
 

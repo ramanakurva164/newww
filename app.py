@@ -269,32 +269,54 @@ else:
                     st.write(f"- {ctx_chunk}")
 
 
-    if prompt := st.chat_input("Ask a question about your documents..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.markdown(f"<div class='chat-bubble chat-bubble-user'><b>You:</b> {prompt}</div>", unsafe_allow_html=True)
+   if prompt := st.chat_input("Ask a question about your documents..."):
+    # Save user message
+    st.session_state.messages.append({"role": "user", "content": prompt})
 
-        with st.spinner("Thinking..."):
-            try:
-                context = retrieve(prompt, st.session_state.active_index, st.session_state.active_chunks)
-                combined_context = " ".join(context)
-                
-                llm_prompt = f"Based on the following context, answer the question.\n\nContext: {combined_context}\n\nQuestion: {prompt}\n\nAnswer:"
-                response = qa_pipeline(llm_prompt, max_new_tokens=256)[0]["generated_text"]
+    # Display using same container style
+    st.markdown(
+        f"""
+        <div class="chat-container">
+            <div class="chat-bubble chat-bubble-user">
+                <b>You:</b> {prompt}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-                bot_message = {"role": "assistant", "content": response, "context": context}
-                st.session_state.messages.append(bot_message)
-                
-                st.markdown(f"<div class='chat-bubble chat-bubble-bot'><b>Bot:</b> {response}</div>", unsafe_allow_html=True)
+    with st.spinner("Thinking..."):
+        try:
+            context = retrieve(prompt, st.session_state.active_index, st.session_state.active_chunks)
+            combined_context = " ".join(context)
+            
+            llm_prompt = f"Based on the following context, answer the question.\n\nContext: {combined_context}\n\nQuestion: {prompt}\n\nAnswer:"
+            response = qa_pipeline(llm_prompt, max_new_tokens=256)[0]["generated_text"]
 
-                if context:
-                    with st.expander("📖 View Retrieved Context"):
-                        for ctx_chunk in context:
-                            st.write(f"- {ctx_chunk}")
+            bot_message = {"role": "assistant", "content": response, "context": context}
+            st.session_state.messages.append(bot_message)
 
-                if play_audio:
-                    audio_path = generate_audio(response)
-                    if audio_path:
-                        st.audio(audio_path, format="audio/wav")
+            # Bot bubble also wrapped properly
+            st.markdown(
+                f"""
+                <div class="chat-container">
+                    <div class="chat-bubble chat-bubble-bot">
+                        <b>Bot:</b> {response}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            except Exception as e:
-                st.error(f"An error occurred while generating the response: {e}")
+            if context:
+                with st.expander("📖 View Retrieved Context"):
+                    for ctx_chunk in context:
+                        st.write(f"- {ctx_chunk}")
+
+            if play_audio:
+                audio_path = generate_audio(response)
+                if audio_path:
+                    st.audio(audio_path, format="audio/wav")
+
+        except Excep
+

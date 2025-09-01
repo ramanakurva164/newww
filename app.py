@@ -5,13 +5,13 @@ import faiss
 import tempfile
 import numpy as np
 import soundfile as sf
+import transformers
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline as hf_pipeline
 from PyPDF2 import PdfReader
 from supabase import create_client, Client, AuthApiError
-from TTS.api import TTS
-import transformers
 
 from rag_utils import load_vectorstore, retrieve, chunk_text, get_embedder
+
 
 # ---------------- Supabase Client Initialization ----------------
 try:
@@ -21,6 +21,7 @@ try:
 except KeyError as e:
     st.error(f"Missing Streamlit secret: {e}. Ensure SUPABASE_URL and SUPABASE_KEY are in .streamlit/secrets.toml")
     st.stop()
+
 
 # ---------------- Authentication Functions ----------------
 def sign_in(email, password):
@@ -37,6 +38,7 @@ def sign_in(email, password):
     except Exception as e:
         st.error(f"Unexpected error during login: {e}")
 
+
 def sign_up(email, password):
     try:
         response = supabase.auth.sign_up({"email": email, "password": password})
@@ -49,6 +51,7 @@ def sign_up(email, password):
     except Exception as e:
         st.error(f"Unexpected error during sign-up: {e}")
 
+
 def logout():
     try:
         supabase.auth.sign_out()
@@ -58,39 +61,54 @@ def logout():
     except Exception as e:
         st.error(f"Logout failed: {e}")
 
-# ---------------- Hugging Face & Coqui TTS ----------------
+
+# ---------------- Hugging Face TTS ----------------
 @st.cache_resource
-def load_tts(model_name: str):
-    """Load a TTS model safely: HF pipeline or Coqui XTTS."""
-    if model_name == "coqui/XTTS-v2":
-        return TTS("tts_models/multilingual/multi-dataset/xtts_v2")
-    else:
-        device = 0 if torch.cuda.is_available() else -1
-        return hf_pipeline("text-to-speech", model=model_name, device=device)
+def load_tts(model_name: str = "facebook/mms-tts-eng"):
+    device = 0 if torch.cuda.is_available() else -1
+    return hf_pipeline("text-to-speech", model=model_name, device=device)
+
 
 def generate_audio(text: str, tts_pipeline, model_name: str):
-    """Generate speech and save as WAV."""
+    """Generate speech with HF TTS, normalize outputs, and save a valid WAV."""
     try:
-        if model_name == "coqui/XTTS-v2":
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                tts_pipeline.tts_to_file(text=text, speaker="en", language="en", file_path=tmp.name)
-                return tmp.name
+        # Special handling for XTTS
+        if "XTTS" in model_name:
+            out = tts_pipeline(text, speaker="english", language="en")
         else:
             out = tts_pipeline(text)
+
+        if isinstance(out, list):  # some models return list
+            out = out[0]
+
+        audio = None
+        sr = 16000  # default
+
+        if "audio" in out:
             audio = out["audio"]
-            sr = int(out.get("sampling_rate", 16000))
+        elif "array" in out:
+            audio = out["array"]
 
-            if hasattr(audio, "cpu"):  # torch tensor
-                audio = audio.detach().cpu().numpy()
-            audio = np.asarray(audio).squeeze().astype(np.float32)
-            audio = np.clip(audio, -1.0, 1.0)
+        if "sampling_rate" in out:
+            sr = int(out["sampling_rate"])
 
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-                sf.write(tmp.name, audio, sr, format="WAV", subtype="PCM_16")
-                return tmp.name
+        if audio is None:
+            raise ValueError("No audio data returned from model")
+
+        # Convert to numpy
+        if hasattr(audio, "cpu"):  # torch tensor
+            audio = audio.detach().cpu().numpy()
+        audio = np.asarray(audio).squeeze().astype(np.float32)
+
+        audio = np.clip(audio, -1.0, 1.0)
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            sf.write(tmp.name, audio, sr, format="WAV", subtype="PCM_16")
+            return tmp.name
     except Exception as e:
         st.error(f"TTS generation failed: {e}")
         return None
+
 
 # ---------------- Streamlit Page Config ----------------
 st.set_page_config(page_title="RAG Chatbot", page_icon="📘", layout="wide")
@@ -109,6 +127,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
 # ---------------- Session State ----------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -116,6 +135,7 @@ if "user" not in st.session_state:
     st.session_state.user = None
 if "messages" not in st.session_state:
     st.session_state.messages = []
+
 
 # ---------------- Authentication Gate ----------------
 if not st.session_state.logged_in:
@@ -155,7 +175,6 @@ else:
     # ---------------- Main Application ----------------
     st.title("📘 Chat with your documents like never before.")
 
-    # ---------------- Sidebar ----------------
     with st.sidebar:
         st.header("👤 My Account")
         if st.session_state.user:
@@ -207,10 +226,10 @@ else:
         tts_model_choice = st.selectbox(
             "Choose a TTS model",
             [
-                "facebook/mms-tts-eng",
-                "espnet/kan-bayashi_ljspeech_vits",
-                "espnet/kan-bayashi_ljspeech_fastspeech2",
-            
+                "facebook/mms-tts-eng",               # multilingual, robotic
+                "espnet/kan-bayashi_ljspeech_vits",   # natural female EN
+                "espnet/kan-bayashi_ljspeech_fastspeech2",  # lighter EN
+                "coqui/XTTS-v2"                       # multilingual, expressive
             ],
             index=0
         )

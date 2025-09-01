@@ -1,26 +1,13 @@
-# Streamlit
 streamlit==1.27.0
-
-# ML / AI
 torch>=2.1.0,<2.9.0
 torchaudio>=2.1.0,<2.9.0
 transformers>=4.37.0,<5.0.0
 numpy>=1.25.0,<2.0.0
 faiss-cpu>=1.7.4,<2.0.0
-
-# PDF handling
 PyPDF2==3.0.1
-
-# Audio handling
 soundfile>=0.12.1,<0.15.0
-
-# Supabase
 supabase<=2.18.1
-
-# Pillow (must stay <10 for Streamlit 1.27 compatibility)
 pillow>=9.5.0,<10
-
-# Additional dependencies for Streamlit
 altair>=4.0,<6
 blinker>=1.0.0,<2
 cachetools>=4.0,<6

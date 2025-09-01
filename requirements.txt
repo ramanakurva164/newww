@@ -5,3 +5,5 @@ sentence-transformers
 transformers
 torch
 PyPDF2
+elevenlabs
+pydub

@@ -4,11 +4,9 @@ import torch
 import faiss
 import tempfile
 import transformers
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from transformers import pipeline as hf_pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline as hf_pipeline
 from PyPDF2 import PdfReader
 from supabase import create_client, Client, AuthApiError
-from elevenlabs.client import ElevenLabs
 
 from rag_utils import load_vectorstore, retrieve, chunk_text, get_embedder
 
@@ -20,14 +18,6 @@ try:
     supabase: Client = create_client(supabase_url, supabase_key)
 except KeyError as e:
     st.error(f"Missing Streamlit secret: {e}. Ensure SUPABASE_URL and SUPABASE_KEY are in .streamlit/secrets.toml")
-    st.stop()
-
-
-# ---------------- ElevenLabs Client Initialization ----------------
-try:
-    eleven_client = ElevenLabs(api_key=st.secrets["ELEVENLABS_API_KEY"])
-except KeyError:
-    st.error("Missing ElevenLabs API key. Please add ELEVENLABS_API_KEY to .streamlit/secrets.toml")
     st.stop()
 
 
@@ -69,36 +59,24 @@ def logout():
     except Exception as e:
         st.error(f"Logout failed: {e}")
 
+
+# ---------------- Hugging Face TTS ----------------
 @st.cache_resource
-def load_fallback_tts():
+def load_tts():
     return hf_pipeline("text-to-speech", model="facebook/mms-tts-eng")
 
-fallback_tts = load_fallback_tts()
+tts_pipeline = load_tts()
 
-# ---------------- ElevenLabs TTS ----------------
-def generate_audio(text: str, voice_id="pNInz6obpgDQGcFmaJgB"):
-    """Generate speech from text using ElevenLabs. Fallback to Hugging Face TTS if ElevenLabs fails."""
+def generate_audio(text: str):
     try:
-        audio_stream = eleven_client.text_to_speech.convert(
-            text=text,
-            voice_id=voice_id,
-            model_id="eleven_turbo_v2_5"
-        )
-        audio_bytes = b"".join(audio_stream)
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmpfile:
-            tmpfile.write(audio_bytes)
+        out = tts_pipeline(text)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmpfile:
+            with open(tmpfile.name, "wb") as f:
+                f.write(out["audio"])
             return tmpfile.name
     except Exception as e:
-        st.warning(f"⚠️ ElevenLabs TTS failed: {e}. Falling back to Hugging Face TTS...")
-        try:
-            out = fallback_tts(text)
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmpfile:
-                with open(tmpfile.name, "wb") as f:
-                    f.write(out["audio"])
-                return tmpfile.name
-        except Exception as e2:
-            st.error(f"Fallback TTS also failed: {e2}")
-            return None
+        st.error(f"TTS generation failed: {e}")
+        return None
 
 
 # ---------------- Streamlit Page Config ----------------
@@ -256,7 +234,7 @@ else:
                 if play_audio:
                     audio_path = generate_audio(response)
                     if audio_path:
-                        st.audio(audio_path, format="audio/mp3")
+                        st.audio(audio_path, format="audio/wav")
 
             except Exception as e:
                 st.error(f"An error occurred while generating the response: {e}")

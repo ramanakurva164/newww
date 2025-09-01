@@ -106,9 +106,41 @@ st.markdown("""
     .stTextInput > div > div > input { background-color: #2b2b2b; border: 2px solid #f97316; border-radius: 10px; padding: 10px; font-size: 16px; color: #f5f5f5; }
     .stButton>button { background-color: #f97316; color: #1a1a1a; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 15px; border: none; box-shadow: 0px 4px 10px rgba(249, 115, 22, 0.3); transition: 0.2s ease-in-out; }
     .stButton>button:hover { background-color: #ea580c; transform: scale(1.05); }
-    .chat-bubble { display: inline-block; padding: 12px 16px; border-radius: 16px; margin: 6px 0; font-size: 15px; line-height: 1.4; color: #f5f5f5; box-shadow: 0px 2px 6px rgba(0,0,0,0.5); max-width: 70%; word-wrap: break-word; white-space: pre-wrap; }
-    .chat-bubble-user { background: #1f2937; border: 2px solid #f97316; border-bottom-right-radius: 4px; margin-left: auto; text-align: right; }
-    .chat-bubble-bot { background: #2b2b2b; border: 2px solid #3b82f6; border-bottom-left-radius: 4px; margin-right: auto; text-align: left; }
+    .chat-container {
+    display: flex;
+    margin: 6px 0;
+    width: 100%;
+}
+
+.chat-bubble {
+    display: inline-block;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 15px;
+    line-height: 1.4;
+    color: #f5f5f5;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.5);
+    max-width: 70%;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+.chat-bubble-user {
+    background: #1f2937;
+    border: 2px solid #f97316;
+    border-bottom-right-radius: 4px;
+    margin-left: auto;   /* push to right */
+    text-align: right;
+}
+
+.chat-bubble-bot {
+    background: #2b2b2b;
+    border: 2px solid #3b82f6;
+    border-bottom-left-radius: 4px;
+    margin-right: auto;  /* push to left */
+    text-align: left;
+}
+
     </style>
 """, unsafe_allow_html=True)
 

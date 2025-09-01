@@ -6,4 +6,4 @@ numpy>=1.25.0
 faiss-cpu>=1.7.4
 PyPDF2==3.0.1
 soundfile>=0.12.1
-supabase>=3.9.0
+supabase<=2.18.1

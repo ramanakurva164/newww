@@ -220,11 +220,22 @@ else:
 
     for msg in st.session_state.messages:
         role_class = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-bot"
-        st.markdown(f"<div class='chat-bubble {role_class}'><b>{'You' if msg['role'] == 'user' else 'Bot'}:</b> {msg['content']}</div>", unsafe_allow_html=True)
+        role_label = "You" if msg["role"] == "user" else "Bot"
+        st.markdown(
+            f"""
+            <div class="chat-container">
+                <div class="chat-bubble {role_class}">
+                    <b>{role_label}:</b> {msg['content']}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
         if msg["role"] == "assistant" and "context" in msg:
             with st.expander("📖 View Retrieved Context"):
                 for ctx_chunk in msg["context"]:
                     st.write(f"- {ctx_chunk}")
+
 
     if prompt := st.chat_input("Ask a question about your documents..."):
         st.session_state.messages.append({"role": "user", "content": prompt})

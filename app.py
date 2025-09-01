@@ -4,7 +4,7 @@ import torch
 import faiss
 import tempfile
 import transformers
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM,pipeline
 from PyPDF2 import PdfReader
 from supabase import create_client, Client, AuthApiError
 from elevenlabs.client import ElevenLabs
@@ -68,10 +68,15 @@ def logout():
     except Exception as e:
         st.error(f"Logout failed: {e}")
 
+@st.cache_resource
+def load_fallback_tts():
+    return hf_pipeline("text-to-speech", model="facebook/mms-tts-eng")
+
+fallback_tts = load_fallback_tts()
 
 # ---------------- ElevenLabs TTS ----------------
 def generate_audio(text: str, voice_id="pNInz6obpgDQGcFmaJgB"):
-    """Generate speech from text using ElevenLabs and return a temp file path."""
+    """Generate speech from text using ElevenLabs. Fallback to Hugging Face TTS if ElevenLabs fails."""
     try:
         audio_stream = eleven_client.text_to_speech.convert(
             text=text,
@@ -79,13 +84,20 @@ def generate_audio(text: str, voice_id="pNInz6obpgDQGcFmaJgB"):
             model_id="eleven_turbo_v2_5"
         )
         audio_bytes = b"".join(audio_stream)
-
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmpfile:
             tmpfile.write(audio_bytes)
             return tmpfile.name
     except Exception as e:
-        st.error(f"TTS generation failed: {e}")
-        return None
+        st.warning(f"⚠️ ElevenLabs TTS failed: {e}. Falling back to Hugging Face TTS...")
+        try:
+            out = fallback_tts(text)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmpfile:
+                with open(tmpfile.name, "wb") as f:
+                    f.write(out["audio"])
+                return tmpfile.name
+        except Exception as e2:
+            st.error(f"Fallback TTS also failed: {e2}")
+            return None
 
 
 # ---------------- Streamlit Page Config ----------------

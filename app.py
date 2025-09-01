@@ -4,7 +4,8 @@ import torch
 import faiss
 import tempfile
 import transformers
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM,pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import pipeline as hf_pipeline
 from PyPDF2 import PdfReader
 from supabase import create_client, Client, AuthApiError
 from elevenlabs.client import ElevenLabs

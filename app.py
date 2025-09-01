@@ -64,13 +64,12 @@ def logout():
 
 # ---------------- Hugging Face TTS ----------------
 @st.cache_resource
-def load_tts():
+def load_tts(model_name: str = "facebook/mms-tts-eng"):
     device = 0 if torch.cuda.is_available() else -1
-    return hf_pipeline("text-to-speech", model="facebook/mms-tts-eng", device=device)
+    return hf_pipeline("text-to-speech", model=model_name, device=device)
 
-tts_pipeline = load_tts()
 
-def generate_audio(text: str):
+def generate_audio(text: str, tts_pipeline):
     """Generate speech with HF TTS, save a valid WAV file, and return its path."""
     try:
         out = tts_pipeline(text)
@@ -202,6 +201,20 @@ else:
             st.session_state.messages = []
             st.rerun()
 
+        st.write("---")
+        st.header("🎙️ Voice Settings")
+        tts_model_choice = st.selectbox(
+            "Choose a TTS model",
+            [
+                "facebook/mms-tts-eng",
+                "espnet/kan-bayashi_ljspeech_vits",
+                "espnet/kan-bayashi_ljspeech_fastspeech2",
+                "coqui/XTTS-v2"
+            ],
+            index=0
+        )
+        tts_pipeline = load_tts(tts_model_choice)
+
         play_audio = st.checkbox("🔊 Enable Audio Response", value=True)
 
     if "active_index" not in st.session_state:
@@ -276,7 +289,7 @@ else:
                             st.write(f"- {ctx_chunk}")
 
                 if play_audio:
-                    audio_path = generate_audio(response)
+                    audio_path = generate_audio(response, tts_pipeline)
                     if audio_path:
                         st.audio(audio_path, format="audio/wav")
 

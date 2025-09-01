@@ -62,44 +62,23 @@ def logout():
         st.error(f"Logout failed: {e}")
 
 
-# ---------------- Hugging Face TTS ----------------
+# ---------------- Hugging Face TTS (facebook only) ----------------
 @st.cache_resource
-def load_tts(model_name: str = "facebook/mms-tts-eng"):
+def load_tts():
     device = 0 if torch.cuda.is_available() else -1
-    return hf_pipeline("text-to-speech", model=model_name, device=device)
+    return hf_pipeline("text-to-speech", model="facebook/mms-tts-eng", device=device)
 
 
-def generate_audio(text: str, tts_pipeline, model_name: str):
+def generate_audio(text: str, tts_pipeline):
     """Generate speech with HF TTS, normalize outputs, and save a valid WAV."""
     try:
-        # Special handling for XTTS
-        if "XTTS" in model_name:
-            out = tts_pipeline(text, speaker="english", language="en")
-        else:
-            out = tts_pipeline(text)
+        out = tts_pipeline(text)
+        audio = out["audio"]
+        sr = int(out.get("sampling_rate", 16000))
 
-        if isinstance(out, list):  # some models return list
-            out = out[0]
-
-        audio = None
-        sr = 16000  # default
-
-        if "audio" in out:
-            audio = out["audio"]
-        elif "array" in out:
-            audio = out["array"]
-
-        if "sampling_rate" in out:
-            sr = int(out["sampling_rate"])
-
-        if audio is None:
-            raise ValueError("No audio data returned from model")
-
-        # Convert to numpy
         if hasattr(audio, "cpu"):  # torch tensor
             audio = audio.detach().cpu().numpy()
         audio = np.asarray(audio).squeeze().astype(np.float32)
-
         audio = np.clip(audio, -1.0, 1.0)
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
@@ -223,18 +202,7 @@ else:
 
         st.write("---")
         st.header("🎙️ Voice Settings")
-        tts_model_choice = st.selectbox(
-            "Choose a TTS model",
-            [
-                "facebook/mms-tts-eng",               # multilingual, robotic
-                "espnet/kan-bayashi_ljspeech_vits",   # natural female EN
-                "espnet/kan-bayashi_ljspeech_fastspeech2",  # lighter EN
-                "coqui/XTTS-v2"                       # multilingual, expressive
-            ],
-            index=0
-        )
-        tts_pipeline = load_tts(tts_model_choice)
-
+        tts_pipeline = load_tts()
         play_audio = st.checkbox("🔊 Enable Audio Response", value=True)
 
     if "active_index" not in st.session_state:
@@ -309,7 +277,7 @@ else:
                             st.write(f"- {ctx_chunk}")
 
                 if play_audio:
-                    audio_path = generate_audio(response, tts_pipeline, tts_model_choice)
+                    audio_path = generate_audio(response, tts_pipeline)
                     if audio_path:
                         st.audio(audio_path, format="audio/wav")
 

@@ -69,13 +69,33 @@ def load_tts(model_name: str = "facebook/mms-tts-eng"):
     return hf_pipeline("text-to-speech", model=model_name, device=device)
 
 
-def generate_audio(text: str, tts_pipeline):
-    """Generate speech with HF TTS, save a valid WAV file, and return its path."""
+def generate_audio(text: str, tts_pipeline, model_name: str):
+    """Generate speech with HF TTS, normalize outputs, and save a valid WAV."""
     try:
-        out = tts_pipeline(text)
-        audio = out["audio"]
-        sr = int(out.get("sampling_rate", 16000))
+        # Special handling for XTTS
+        if "XTTS" in model_name:
+            out = tts_pipeline(text, speaker="english", language="en")
+        else:
+            out = tts_pipeline(text)
 
+        if isinstance(out, list):  # some models return list
+            out = out[0]
+
+        audio = None
+        sr = 16000  # default
+
+        if "audio" in out:
+            audio = out["audio"]
+        elif "array" in out:
+            audio = out["array"]
+
+        if "sampling_rate" in out:
+            sr = int(out["sampling_rate"])
+
+        if audio is None:
+            raise ValueError("No audio data returned from model")
+
+        # Convert to numpy
         if hasattr(audio, "cpu"):  # torch tensor
             audio = audio.detach().cpu().numpy()
         audio = np.asarray(audio).squeeze().astype(np.float32)
@@ -206,10 +226,10 @@ else:
         tts_model_choice = st.selectbox(
             "Choose a TTS model",
             [
-                "facebook/mms-tts-eng",
-                "espnet/kan-bayashi_ljspeech_vits",
-                "espnet/kan-bayashi_ljspeech_fastspeech2",
-                "coqui/XTTS-v2"
+                "facebook/mms-tts-eng",               # multilingual, robotic
+                "espnet/kan-bayashi_ljspeech_vits",   # natural female EN
+                "espnet/kan-bayashi_ljspeech_fastspeech2",  # lighter EN
+                "coqui/XTTS-v2"                       # multilingual, expressive
             ],
             index=0
         )
@@ -289,7 +309,7 @@ else:
                             st.write(f"- {ctx_chunk}")
 
                 if play_audio:
-                    audio_path = generate_audio(response, tts_pipeline)
+                    audio_path = generate_audio(response, tts_pipeline, tts_model_choice)
                     if audio_path:
                         st.audio(audio_path, format="audio/wav")
 

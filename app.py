@@ -71,23 +71,18 @@ def load_tts():
 tts_pipeline = load_tts()
 
 def generate_audio(text: str):
-    """
-    Generate speech with HF TTS, save a valid WAV file, and return its path.
-    """
+    """Generate speech with HF TTS, save a valid WAV file, and return its path."""
     try:
-        out = tts_pipeline(text)  # dict with keys: "audio" (np/torch), "sampling_rate" (int)
+        out = tts_pipeline(text)
         audio = out["audio"]
         sr = int(out.get("sampling_rate", 16000))
 
-        # Convert to numpy float32
         if hasattr(audio, "cpu"):  # torch tensor
             audio = audio.detach().cpu().numpy()
         audio = np.asarray(audio).squeeze().astype(np.float32)
 
-        # Clip to [-1, 1]
         audio = np.clip(audio, -1.0, 1.0)
 
-        # Write proper WAV
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             sf.write(tmp.name, audio, sr, format="WAV", subtype="PCM_16")
             return tmp.name
@@ -106,41 +101,10 @@ st.markdown("""
     .stTextInput > div > div > input { background-color: #2b2b2b; border: 2px solid #f97316; border-radius: 10px; padding: 10px; font-size: 16px; color: #f5f5f5; }
     .stButton>button { background-color: #f97316; color: #1a1a1a; border-radius: 12px; padding: 12px 24px; font-weight: 600; font-size: 15px; border: none; box-shadow: 0px 4px 10px rgba(249, 115, 22, 0.3); transition: 0.2s ease-in-out; }
     .stButton>button:hover { background-color: #ea580c; transform: scale(1.05); }
-    .chat-container {
-    display: flex;
-    margin: 6px 0;
-    width: 100%;
-}
-
-.chat-bubble {
-    display: inline-block;
-    padding: 12px 16px;
-    border-radius: 16px;
-    font-size: 15px;
-    line-height: 1.4;
-    color: #f5f5f5;
-    box-shadow: 0px 2px 6px rgba(0,0,0,0.5);
-    max-width: 70%;
-    word-wrap: break-word;
-    white-space: pre-wrap;
-}
-
-.chat-bubble-user {
-    background: #1f2937;
-    border: 2px solid #f97316;
-    border-bottom-right-radius: 4px;
-    margin-left: auto;   /* push to right */
-    text-align: right;
-}
-
-.chat-bubble-bot {
-    background: #2b2b2b;
-    border: 2px solid #3b82f6;
-    border-bottom-left-radius: 4px;
-    margin-right: auto;  /* push to left */
-    text-align: left;
-}
-
+    .chat-container { display: flex; margin: 6px 0; width: 100%; }
+    .chat-bubble { display: inline-block; padding: 12px 16px; border-radius: 16px; font-size: 15px; line-height: 1.4; color: #f5f5f5; box-shadow: 0px 2px 6px rgba(0,0,0,0.5); max-width: 70%; word-wrap: break-word; white-space: pre-wrap; }
+    .chat-bubble-user { background: #1f2937; border: 2px solid #f97316; border-bottom-right-radius: 4px; margin-left: auto; text-align: right; }
+    .chat-bubble-bot { background: #2b2b2b; border: 2px solid #3b82f6; border-bottom-left-radius: 4px; margin-right: auto; text-align: left; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -250,6 +214,7 @@ else:
                 st.error(f"Could not load the prebuilt vectorstore: {e}")
                 st.stop()
 
+    # ---------------- Display Previous Messages ----------------
     for msg in st.session_state.messages:
         role_class = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-bot"
         role_label = "You" if msg["role"] == "user" else "Bot"
@@ -268,55 +233,52 @@ else:
                 for ctx_chunk in msg["context"]:
                     st.write(f"- {ctx_chunk}")
 
+    # ---------------- Handle New Chat Input ----------------
+    if prompt := st.chat_input("Ask a question about your documents..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-   if prompt := st.chat_input("Ask a question about your documents..."):
-    # Save user message
-    st.session_state.messages.append({"role": "user", "content": prompt})
-
-    # Display using same container style
-    st.markdown(
-        f"""
-        <div class="chat-container">
-            <div class="chat-bubble chat-bubble-user">
-                <b>You:</b> {prompt}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    with st.spinner("Thinking..."):
-        try:
-            context = retrieve(prompt, st.session_state.active_index, st.session_state.active_chunks)
-            combined_context = " ".join(context)
-            
-            llm_prompt = f"Based on the following context, answer the question.\n\nContext: {combined_context}\n\nQuestion: {prompt}\n\nAnswer:"
-            response = qa_pipeline(llm_prompt, max_new_tokens=256)[0]["generated_text"]
-
-            bot_message = {"role": "assistant", "content": response, "context": context}
-            st.session_state.messages.append(bot_message)
-
-            # Bot bubble also wrapped properly
-            st.markdown(
-                f"""
-                <div class="chat-container">
-                    <div class="chat-bubble chat-bubble-bot">
-                        <b>Bot:</b> {response}
-                    </div>
+        st.markdown(
+            f"""
+            <div class="chat-container">
+                <div class="chat-bubble chat-bubble-user">
+                    <b>You:</b> {prompt}
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-            if context:
-                with st.expander("📖 View Retrieved Context"):
-                    for ctx_chunk in context:
-                        st.write(f"- {ctx_chunk}")
+        with st.spinner("Thinking..."):
+            try:
+                context = retrieve(prompt, st.session_state.active_index, st.session_state.active_chunks)
+                combined_context = " ".join(context)
+                
+                llm_prompt = f"Based on the following context, answer the question.\n\nContext: {combined_context}\n\nQuestion: {prompt}\n\nAnswer:"
+                response = qa_pipeline(llm_prompt, max_new_tokens=256)[0]["generated_text"]
 
-            if play_audio:
-                audio_path = generate_audio(response)
-                if audio_path:
-                    st.audio(audio_path, format="audio/wav")
+                bot_message = {"role": "assistant", "content": response, "context": context}
+                st.session_state.messages.append(bot_message)
 
-        except Excep
+                st.markdown(
+                    f"""
+                    <div class="chat-container">
+                        <div class="chat-bubble chat-bubble-bot">
+                            <b>Bot:</b> {response}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
+                if context:
+                    with st.expander("📖 View Retrieved Context"):
+                        for ctx_chunk in context:
+                            st.write(f"- {ctx_chunk}")
+
+                if play_audio:
+                    audio_path = generate_audio(response)
+                    if audio_path:
+                        st.audio(audio_path, format="audio/wav")
+
+            except Exception as e:
+                st.error(f"An error occurred while generating the response: {e}")

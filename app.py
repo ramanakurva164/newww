@@ -103,6 +103,8 @@ st.markdown("""
     .chat-bubble { display: inline-block; padding: 12px 16px; border-radius: 16px; font-size: 15px; line-height: 1.4; color: #f5f5f5; box-shadow: 0px 2px 6px rgba(0,0,0,0.5); max-width: 70%; word-wrap: break-word; white-space: pre-wrap; }
     .chat-bubble-user { background: #1f2937; border: 2px solid #f97316; border-bottom-right-radius: 4px; margin-left: auto; text-align: right; }
     .chat-bubble-bot { background: #2b2b2b; border: 2px solid #3b82f6; border-bottom-left-radius: 4px; margin-right: auto; text-align: left; }
+    .stAudio { max-width: 300px; margin: 10px 0; }
+    .stAudio > div { max-width: 100%; }
     </style>
 """, unsafe_allow_html=True)
 
